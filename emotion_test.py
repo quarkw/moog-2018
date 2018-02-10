@@ -3,15 +3,18 @@ import operator
 import time
 import os
 from functools import reduce
+from threading import Thread
 
 import requests
 import cv2
+from queue import Queue
 
 _key = os.environ['MS_EMOTION_KEY']
 _url = "https://westus.api.cognitive.microsoft.com/emotion/v1.0/recognize"
+_numWorkerThreads = 5
 _maxNumRetries = 10
-_faceDetectionScaleDown = .25;
-_faceeDeteectionScaleUp = 4;
+_faceDetectionScaleDown = .25
+_faceeDeteectionScaleUp = 4
 
 cap = cv2.VideoCapture(0)
 
@@ -36,7 +39,7 @@ def processRequest(json, data, headers, params):
     data: Used when processing image read from disk. See API Documentation
     headers: Used to pass the key information and the data type request
     """
-
+    global lastResult
     retries = 0
     result = None
 
@@ -71,38 +74,51 @@ def processRequest(json, data, headers, params):
 
         break
 
+    if not result:
+        return result
+    currFace = reduce(returnBiggerFace, result, result[0])
+    lastResult = currFace
     return result
+
+def processRequestWorker():
+    while True:
+        item = q.get()
+        processRequest(*item)
+        q.task_done()
+
+q = Queue()
 
 def getFaceArea(face):
     return face['faceRectangle']['width'] * face['faceRectangle']['height']
+
+def returnBiggerFace(faceA, faceB) :
+    faceAArea = getFaceArea(faceA)
+    faceBArea = getFaceArea(faceB)
+    if faceAArea > faceBArea:
+        return faceA
+    elif faceBArea > faceAArea:
+        return faceB
+    elif faceB['faceRectangle']['left'] < faceA['faceRectangle']['left']:
+        return faceB
+    elif faceA['faceRectangle']['left'] < faceB['faceRectangle']['left']:
+        return faceA
+    elif faceB['faceRectangle']['top'] < faceA['faceRectangle']['top']:
+        return faceB
+    else:
+        return faceA
 
 def renderResultOnImage(result, img):
     global lastResult
     """Display the obtained results onto the input image"""
     # Find the largest face in the result set
     def convertCv2FaceToMsFace(cv2Face):
-        if'faceRectangle' in cv2Face:
+        if 'faceRectangle' in cv2Face:
             return cv2Face
         cv2Face = list(map(lambda x: x * _faceeDeteectionScaleUp,cv2Face))
         return { 'faceRectangle': {'left': cv2Face[0], 'top': cv2Face[1], 'width': cv2Face[2], 'height': cv2Face[3]} }
+
     result = list(map(convertCv2FaceToMsFace, result))
 
-    def returnBiggerFace(faceA, faceB) :
-        faceAArea = getFaceArea(faceA)
-        faceBArea = getFaceArea(faceB)
-        if faceAArea > faceBArea:
-            return faceA
-        elif faceBArea > faceAArea:
-            return faceB
-        elif faceB['faceRectangle']['left'] < faceA['faceRectangle']['left']:
-            return faceB
-        elif faceA['faceRectangle']['left'] < faceB['faceRectangle']['left']:
-            return faceA
-        elif faceB['faceRectangle']['top'] < faceA['faceRectangle']['top']:
-            return faceB
-        else:
-            return faceA
-    print (result)
     if not result:
         return
     currFace = reduce(returnBiggerFace, result, result[0])
@@ -122,6 +138,12 @@ def renderResultOnImage(result, img):
         cv2.putText(img, textToWrite, (faceRectangle['left'], faceRectangle['top'] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                     (255, 0, 0), 1)
 
+
+for i in range(_numWorkerThreads):
+     t = Thread(target=processRequestWorker)
+     t.daemon = True
+     t.start()
+
 while(True):
     # Capture frame-by-frame
     ret, frame = cap.read()
@@ -135,13 +157,12 @@ while(True):
     faces = face_cascade.detectMultiScale(gray, 1.1, 5)
     # print(faces)
     if int(time.time()) - timestamp > 3:
-        result = processRequest(json, jpg, headers, params)
-        if result is not None:
-            timestamp = int(time.time())
-            # Load the original image from disk
-            renderResultOnImage(result, frame)
-    else:
-        renderResultOnImage(faces,frame)
+        q.put((json,jpg,headers,params))
+        timestamp = int(time.time())
+        # Load the original image from disk
+        # renderResultOnImage(result, frame)
+    # else:
+    renderResultOnImage(faces,frame)
     cv2.imshow('frame',frame)
 
 # Display the resulting frame
