@@ -74,3 +74,9 @@ include/*
 
 # End of https://www.gitignore.io/api/pycharm
 
+/venv/
+/sdk/
+
+.DS_Store
+
+.idea/
