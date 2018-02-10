@@ -14,6 +14,15 @@ from modules.util.opencv_webcam_multithread import WebcamVideoStream
 
 vs = WebcamVideoStream().start()
 
+def generate_outputs():
+    # We return an array of six integers (0-255)
+    # where each integer represents the arduino "analog" output
+    return None
+
+def send_to_arduino():
+    # send a string of 6 characters( ascii val 0-255 to arduino)
+    return None
+
 def update_inputs_from_event(event):
     # An event should be a dictionary of inputs that should be updated
     global inputs
@@ -21,6 +30,7 @@ def update_inputs_from_event(event):
     updated_input = {**inputs, **event}
     inputs = updated_input
     INPUTS_LOCK.release()
+    send_to_arduino(generate_outputs())
 
 
 def update_face_rectangle(face):
@@ -28,9 +38,10 @@ def update_face_rectangle(face):
     face_rectangle = face['face']['faceRectangle']
 
 
-from modules.input import emotion_input
+from modules.input import emotion_input, myo_input
 
 emotion_input.getObservable().on('input',update_inputs_from_event)
+myo_input.getObservable().on('input',update_inputs_from_event)
 emotion_input.getObservable().on('face',update_face_rectangle)
 
 _OUTPUT_LOW = 0
@@ -48,11 +59,6 @@ face_rectangle = {}
 
 vs = WebcamVideoStream().start()
 
-
-def generate_outputs():
-    # We return an array of six integers (0-255)
-    # where each integer represents the arduino "analog" output
-    return None
 
 
 def renderResultOnImage(img):
