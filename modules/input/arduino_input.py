@@ -13,13 +13,16 @@ def getObservable():
 
 connected = False
 
-serial_port = serial.Serial('/dev/cu.usbmodem14111', timeout=2, baudrate=115200)
+serial_port = serial.Serial('/dev/cu.usbmodem14111', timeout=2, baudrate=9600)
+
 time.sleep(2)
 
+def getSerialPort():
+    return serial_port
+
+
 def trigger(data_str):
-    if data_str == "":
-        data_str = 0
-    obs.trigger('input',{'soft_pot': int(data_str)})
+    obs.trigger('input',{'soft_pot': data_str})
 
 def read_from_port(ser):
     global connected
@@ -29,8 +32,15 @@ def read_from_port(ser):
 
         while True:
             if (ser.inWaiting() > 0):
-                data_str = ser.readline(ser.inWaiting()).decode('ascii')
-                trigger(re.sub("\s", "", str(data_str)))
+                try:
+                    data_str = str(ser.readline(ser.inWaiting()).decode('ascii'))
+                    data_str1 = re.sub("\s", "", data_str)
+                    if data_str1 == "":
+                        data_str1 = "0"
+                    trigger(int(data_str1))
+                except:
+                    print("Arduino received: " + data_str)
+
 
 thread = Thread(target=read_from_port, args=(serial_port,))
 thread.start()

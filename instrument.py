@@ -1,19 +1,46 @@
 #!/usr/bin/env python
 import operator
 from threading import Lock
-
+import serial
 import cv2
 from modules.util.opencv_webcam_multithread import WebcamVideoStream
 
 vs = WebcamVideoStream().start()
+last_send_to_arduino = ''
 
 def generate_outputs():
     # We return an array of six integers (0-255)
     # where each integer represents the arduino "analog" output
-    return None
+    outputs = [0,0,0,0,0,0]
+    if 'soft_pot' in inputs:
+        if inputs['soft_pot'] > 100:
+            outputs[0] = inputs['soft_pot']/4
+    if 'myo' in inputs:
+        (x,y,z) = list(map(lambda x: (x+180)/2,inputs['myo']))
+        outputs[1] = x
+        outputs[2] = y
+        outputs[3] = z
 
-def send_to_arduino():
+    if 'emotions' in inputs:
+        currEmotion = max(inputs['emotions'].items(), key=operator.itemgetter(1))[0]
+
+    outputs = map(lambda x: int(min(x, 255)), outputs)
+    outputs = map(lambda x: 1 if x < 4 else x, outputs)
+    # print(list(outputs))
+    return "".join(chr(i) for i in outputs)
+
+def send_to_arduino(string):
+    global last_send_to_arduino
     # send a string of 6 characters( ascii val 0-255 to arduino)
+    # print(string.encode())
+    # string = 'abcdef']
+    if string == last_send_to_arduino:
+        return None
+    string1 = chr(2)+ string + chr(3)
+    # print(len(string))
+    # print("Sending: " + string)
+    arduino_input.getSerialPort().write(string1.encode())
+    last_send_to_arduino = string
     return None
 
 def update_inputs_from_event(event):
@@ -23,27 +50,29 @@ def update_inputs_from_event(event):
     updated_input = {**inputs, **event}
     inputs = updated_input
     INPUTS_LOCK.release()
-    # send_to_arduino(generate_outputs())
-    print(inputs)
+    if 'soft_pot' in event:
+        send_to_arduino(generate_outputs())
+    #     print(event)
 
 def update_face_rectangle(face):
     global face_rectangle
     face_rectangle = face['face']['faceRectangle']
 
 
-from modules.input import emotion_input, arduino_input
+from modules.input import emotion_input, arduino_input, myo_input
+
+inputs = {}
+INPUTS_LOCK = Lock()
 
 emotion_input.getObservable().on('input',update_inputs_from_event)
 arduino_input.getObservable().on('input',update_inputs_from_event)
-# myo_input.getObservable().on('input',update_inputs_from_event)
+myo_input.getObservable().on('input',update_inputs_from_event)
 emotion_input.getObservable().on('face',update_face_rectangle)
 
 _OUTPUT_LOW = 0
 _OUTPUT_HIGH = 255
 
 output_ranges = ((0, 255), (0, 255), (0, 255), (0, 255), (0, 255), (0, 255)) #tuples
-inputs = { 'soft_pot': 0, 'myo': {}, 'emotions': {} }
-INPUTS_LOCK = Lock()
 
 base_trim = 0
 trims = ()

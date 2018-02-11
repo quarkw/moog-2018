@@ -8,7 +8,7 @@ obs = Observable()
 
 getcontext().prec = 4
 
-init('../../sdk/myo.framework')
+init('sdk/myo.framework')
 feed = Feed()
 hub = Hub()
 hub.run(1000, feed)
@@ -33,7 +33,7 @@ def quaternionToEuler(w, x, y, z):
     t4 = +1.0 - 2.0 * (ysqr + z * z)
     Z = math.degrees(math.atan2(t3, t4))
 
-    return [format(X, '2.3f'), format(Y, '2.3f'), format(Z, '2.3f')]
+    return [X, Y, Z]
 
 def main():
     #Repeating logic goes in here
@@ -45,11 +45,15 @@ def main():
             print("Connected to Myo")
             while hub.running and myo.connected:
                 quat = myo.orientation
+                arr = quaternionToEuler(quat.w,
+                                        quat.x,
+                                        quat.y,
+                                        quat.z)
+                obs.trigger('input', {'myo': arr})
 
         finally:
             hub.shutdown()  #!! crucial
 
-        obs.trigger('input', {'myo': quat})
         return
 
 main_thread = Thread(target=main)
