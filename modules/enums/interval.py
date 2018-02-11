@@ -1,18 +1,15 @@
-from enum import Enum
-
-
-class Interval(Enum):
+class Interval:
     TONIC = 0
-    MINOR2 = 5
-    MAJOR2 = 10
-    MINOR3 = 15
-    MAJOR3 = 20
-    FOURTH = 25
-    TRITONE = 30
-    FIFTH = 35
-    MINOR6 = 40
-    MAJOR6 = 45
-    MINOR7 = 50
-    MAJOR7 = 55
-    OCTAVE = 60
-    OCTAVE2 = 120
+    MINOR2 = 1
+    MAJOR2 = 2
+    MINOR3 = 3
+    MAJOR3 = 4
+    FOURTH = 5
+    TRITONE = 6
+    FIFTH = 7
+    MINOR6 = 8
+    MAJOR6 = 9
+    MINOR7 = 10
+    MAJOR7 = 11
+    OCTAVE = 12
+    OCTAVE2 = 24

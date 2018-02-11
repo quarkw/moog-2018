@@ -186,7 +186,7 @@ def main():
                 obs.trigger('face', {'face': {'faceRectangle': {}}})
 
             # print(faces)
-            if time.time() - timestamp > 3:
+            if time.time() - timestamp > 1:
                 q.put((json, jpg, headers, params))
                 timestamp = int(time.time())
                 # Load the original image from disk

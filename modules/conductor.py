@@ -41,7 +41,7 @@ class Conductor:
             if time.time() - self.lastTick > self.q * self.arpeggio_speed:
                 self.lastTick = time.time()
                 # Go to the next arpeggio
-                self.last_note += self.interval
+                self.last_note += self.interval * 4
                 self.arpeggio_step += 1
                 if self.arpeggio_step > self.arpeggio_length:
                     self.last_note = self.base_note
@@ -63,7 +63,7 @@ class Conductor:
 
     def set_bpm(self, bpm):
         self.bpm = bpm
-        self.q = 1/self.bpm*60000
+        self.q = 1/self.bpm*60
 
 if __name__ == "__main__" :
     conductor = Conductor()
@@ -74,6 +74,6 @@ if __name__ == "__main__" :
     conductor.obs.on('note', print)
     conductor.play(0)
 
-    time.sleep(5)
+    time.sleep(1)
     conductor.play(3)
     conductor.arpeggio_repeat = True

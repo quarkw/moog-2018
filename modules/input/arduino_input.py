@@ -39,7 +39,7 @@ def read_from_port(ser):
                         data_str1 = "0"
                     trigger(int(data_str1))
                 except:
-                    print("Arduino received: " + data_str)
+                    print("Arduino receiveth: " + data_str)
 
 
 thread = Thread(target=read_from_port, args=(serial_port,))

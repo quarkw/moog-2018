@@ -1,7 +1,4 @@
-from enum import Enum
-
-
-class Note(Enum):
+class Note:
     W = 4
     H = 2
     Q = 1
