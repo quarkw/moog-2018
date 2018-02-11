@@ -24,16 +24,17 @@ def update_inputs_from_event(event):
     inputs = updated_input
     INPUTS_LOCK.release()
     # send_to_arduino(generate_outputs())
-
+    print(inputs)
 
 def update_face_rectangle(face):
     global face_rectangle
     face_rectangle = face['face']['faceRectangle']
 
 
-from modules.input import emotion_input
+from modules.input import emotion_input, arduino_input
 
 emotion_input.getObservable().on('input',update_inputs_from_event)
+arduino_input.getObservable().on('input',update_inputs_from_event)
 # myo_input.getObservable().on('input',update_inputs_from_event)
 emotion_input.getObservable().on('face',update_face_rectangle)
 
