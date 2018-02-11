@@ -1,5 +1,4 @@
 # Microsoft emotion api module
-import zope.event
 from observable import Observable
 
 import operator

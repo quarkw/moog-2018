@@ -1,14 +1,7 @@
 #!/usr/bin/env python
 import operator
-import threading
-from queue import Queue
 from threading import Lock
-from multiprocessing import Pool
 
-
-# input_modules
-# import myo_input
-# import arduino_input
 import cv2
 from modules.util.opencv_webcam_multithread import WebcamVideoStream
 
@@ -30,7 +23,7 @@ def update_inputs_from_event(event):
     updated_input = {**inputs, **event}
     inputs = updated_input
     INPUTS_LOCK.release()
-    send_to_arduino(generate_outputs())
+    # send_to_arduino(generate_outputs())
 
 
 def update_face_rectangle(face):
@@ -38,10 +31,10 @@ def update_face_rectangle(face):
     face_rectangle = face['face']['faceRectangle']
 
 
-from modules.input import emotion_input, myo_input
+from modules.input import emotion_input
 
 emotion_input.getObservable().on('input',update_inputs_from_event)
-myo_input.getObservable().on('input',update_inputs_from_event)
+# myo_input.getObservable().on('input',update_inputs_from_event)
 emotion_input.getObservable().on('face',update_face_rectangle)
 
 _OUTPUT_LOW = 0
