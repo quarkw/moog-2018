@@ -2,6 +2,7 @@ from threading import Thread
 
 import serial
 import time
+import re
 from observable import Observable
 
 obs = Observable()
@@ -16,7 +17,9 @@ serial_port = serial.Serial('/dev/cu.usbmodem14111', timeout=2, baudrate=115200)
 time.sleep(2)
 
 def trigger(data_str):
-    obs.trigger('input',{'soft_pot': data_str})
+    if data_str == "":
+        data_str = 0
+    obs.trigger('input',{'soft_pot': int(data_str)})
 
 def read_from_port(ser):
     global connected
@@ -27,7 +30,7 @@ def read_from_port(ser):
         while True:
             if (ser.inWaiting() > 0):
                 data_str = ser.readline(ser.inWaiting()).decode('ascii')
-                trigger(data_str)
+                trigger(re.sub("\s", "", str(data_str)))
 
 thread = Thread(target=read_from_port, args=(serial_port,))
 thread.start()
