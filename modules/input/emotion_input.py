@@ -156,7 +156,7 @@ for i in range(_numWorkerThreads):
      t.start()
 
 def main():
-    timestamp = int(time.time())
+    timestamp = time.time()
     while (True):
         # Capture frame-by-frame
         ret, frame = vs.read()
@@ -186,7 +186,7 @@ def main():
                 obs.trigger('face', {'face': {'faceRectangle': {}}})
 
             # print(faces)
-            if int(time.time()) - timestamp > 3:
+            if time.time() - timestamp > 3:
                 q.put((json, jpg, headers, params))
                 timestamp = int(time.time())
                 # Load the original image from disk
