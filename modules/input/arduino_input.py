@@ -13,7 +13,7 @@ def getObservable():
 
 connected = False
 
-serial_port = serial.Serial('/dev/cu.usbmodem14111', timeout=2, baudrate=9600)
+serial_port = serial.Serial('/dev/cu.usbmodem14111', baudrate=9600, write_timeout=.2)
 
 time.sleep(2)
 
@@ -33,11 +33,12 @@ def read_from_port(ser):
         while True:
             if (ser.inWaiting() > 0):
                 try:
-                    data_str = str(ser.readline(ser.inWaiting()).decode('ascii'))
+                    data_str = str(ser.readline().decode('ascii'))
                     data_str1 = re.sub("\s", "", data_str)
                     if data_str1 == "":
                         data_str1 = "0"
                     trigger(int(data_str1))
+                    ser.read(ser.inWaiting())
                 except:
                     print("Arduino receiveth: " + data_str)
 

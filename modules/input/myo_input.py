@@ -49,7 +49,8 @@ def main():
                                         quat.x,
                                         quat.y,
                                         quat.z)
-                obs.trigger('input', {'myo': arr})
+                (pose) = myo.pose.value
+                obs.trigger('input', {'myo': arr , 'pose': pose })
 
         finally:
             hub.shutdown()  #!! crucial

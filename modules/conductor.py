@@ -36,7 +36,8 @@ class Conductor:
 
     def update(self):
         while self.started:
-            if self.arpeggio_step > self.arpeggio_length or self.arpeggio_length == 0:
+            if self.arpeggio_length == 0:
+                time.sleep(1)
                 continue
             if time.time() - self.lastTick > self.q * self.arpeggio_speed:
                 self.lastTick = time.time()

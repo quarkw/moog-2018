@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import operator
-from threading import Lock
+from queue import Queue
+from threading import Lock, Thread
 import serial
 from numpy import interp
 import cv2
@@ -8,6 +9,8 @@ from modules.conductor import Conductor;
 from modules.enums.interval import Interval;
 from modules.enums.note import Note;
 from modules.util.opencv_webcam_multithread import WebcamVideoStream
+
+write_queue = Queue()
 
 vs = WebcamVideoStream().start()
 last_send_to_arduino = ''
@@ -19,6 +22,7 @@ conductor.interval = Interval.MAJOR3
 conductor.arpeggio_speed = Note.ET
 conductor.arpeggio_repeat = True
 
+
 def generate_outputs():
     # We return an array of six integers (0-255)
     # where each integer represents the arduino "analog" output
@@ -29,21 +33,32 @@ def generate_outputs():
             if abs(outputs[0] - conductor.base_note) > 2:
                 conductor.play(outputs[0])
     if 'myo' in inputs:
-        (x,y,z) = list(map(lambda x: (x+180)/2,inputs['myo']))
-        outputs[1] = x
-        outputs[2] = y
-        outputs[3] = z
+        (x,y,z) = inputs['myo']
+        outputs[1] = interp(x,[-60,30],[0,255])
+        outputs[2] = interp(y,[-90,90],[0,255])
+        outputs[3] = interp(z,[-180,180],[0,255])
+        conductor.set_bpm(interp(y,[-90,0,90],[5,100,1000]))
 
     if 'emotions' in inputs:
         currEmotion = max(inputs['emotions'].items(), key=operator.itemgetter(1))[0]
         if currEmotion == 'happiness':
-            conductor.arpeggio_length = 5
+            conductor.arpeggio_length = int(interp(z,[-90,90],[2,7]))
+            # conductor.interval = Interval.MAJOR3
         else:
-            conductor.arpeggio_length = 3
+            conductor.arpeggio_length = int(interp(z,[-90,90],[1,4]))
+            # conductor.interval = -Interval.Minor3
 
+        # conductor.arpeggio_step = int(interp(z,[-150,150],[1,5]))
+
+        if inputs['pose'] == 3:
+            conductor.arpeggio_length = 0
+            # conductor.
+        # else:
+
+
+    # print(list(outputs))
     outputs = map(lambda x: int(min(x, 255)), outputs)
     outputs = map(lambda x: 1 if x < 4 else x, outputs)
-    # print(list(outputs))
     return "".join(chr(i) for i in outputs)
 
 
@@ -56,9 +71,13 @@ def send_to_arduino(string):
         return None
     string1 = chr(2)+ string + chr(3)
     # print(len(string))
-    # print("Sending: " + string)
+    # print("Sending: "+ str(list(map(lambda x: ord(x),string))) )
+
     try:
+        # write_queue.put(string1.encode())
+        # if arduino_input.getSerialPort().out_waiting() == 0:
         arduino_input.getSerialPort().write(string1.encode())
+        arduino_input.getSerialPort().cancel_write()
         last_send_to_arduino = string
         global last_note
         last_note = ord(string[0])
@@ -84,6 +103,8 @@ def update_inputs_from_event(event):
     INPUTS_LOCK.release()
     if 'soft_pot' in event:
         send_to_arduino(generate_outputs())
+        # print(event)
+    # if 'myo' in event:
     #     print(event)
 
 def update_face_rectangle(face):
@@ -91,11 +112,24 @@ def update_face_rectangle(face):
     face_rectangle = face['face']['faceRectangle']
 
 
-from modules.input import emotion_input, arduino_input
+from modules.input import emotion_input, arduino_input, myo_input
+
+
+def write_worker():
+    while True:
+        item = write_queue.get()
+        arduino_input.getSerialPort().write(item)
+        write_queue.task_done()
+
+for i in range(10):
+     t = Thread(target=write_worker)
+     t.daemon = True
+     t.start()
+
 
 emotion_input.getObservable().on('input',update_inputs_from_event)
 arduino_input.getObservable().on('input',update_inputs_from_event)
-# myo_input.getObservable().on('input',update_inputs_from_event)
+myo_input.getObservable().on('input',update_inputs_from_event)
 emotion_input.getObservable().on('face',update_face_rectangle)
 
 inputs = {}
@@ -134,10 +168,10 @@ def renderResultOnImage(img):
 
 
 while True:
-    None
-    # ret, frame = vs.read()
-    # if ret:
-    #     renderResultOnImage(frame)
-    #     cv2.imshow('frame', cv2.resize(frame,(0,0),fx=.2,fy=.2))
-    # if cv2.waitKey(1) & 0xFF == ord('q'):
-    #     break
+    # None
+    ret, frame = vs.read()
+    if ret:
+        renderResultOnImage(frame)
+        cv2.imshow('frame', cv2.resize(frame,(0,0),fx=.2,fy=.2))
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
